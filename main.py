@@ -1,91 +1,111 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import math
 import matplotlib.pyplot as plt
 
 
-# Function to calculate engine parameters
 def calculate_performance():
-    # Fetch input values
-    bore = float(entry_bore.get())
-    stroke = float(entry_stroke.get())
-    num_cylinders = int(entry_cylinders.get())
-    rated_bp = float(entry_bp.get())
-    rated_rpm = float(entry_rpm.get())
-    fuel_density = float(entry_density.get())
-    calorific_value = float(entry_calorific.get())
-    
-    # Convert units if necessary
-    if bore_units.get() == "inches":
-        bore *= 0.0254
-    if stroke_units.get() == "inches":
-        stroke *= 0.0254
-    if bp_units.get() == "HP":
-        rated_bp *= 0.7457
+    try:
+        # Fetch and validate input values
+        bore = float(entry_bore.get())
+        stroke = float(entry_stroke.get())
+        num_cylinders = int(entry_cylinders.get())
+        rated_bp = float(entry_bp.get())
+        rated_rpm = float(entry_rpm.get())
+        fuel_density = float(entry_density.get())
+        calorific_value = float(entry_calorific.get())
 
-    # Get load test type
-    load_test_type = load_system.get()
-    if load_test_type == "Rope Brake Dynamometer":
-        R = float(entry_brake_radius.get())
-        w_max = (4500 * rated_bp) / (2 * math.pi * rated_rpm * R)
-    else:
-        # Placeholder for Electric Generator calculations if needed
-        w_max = 0
+        # Unit conversion
+        if bore_units.get() == "inches":
+            bore *= 0.0254  # Convert inches to meters
+        if stroke_units.get() == "inches":
+            stroke *= 0.0254  # Convert inches to meters
+        if bp_units.get() == "HP":
+            rated_bp *= 0.7457  # Convert HP to kW
 
-    # Calculate performance parameters
-    area_of_cylinder = math.pi * (bore / 2) ** 2
-    num_working_strokes_per_minute = rated_rpm / 2
+        # Load test type
+        load_test_type = load_system.get()
+        if load_test_type == "Rope Brake Dynamometer":
+            try:
+                R = float(entry_brake_radius.get())
+                if R <= 0:
+                    raise ValueError("Mean radius must be positive.")
+            except ValueError:
+                messagebox.showerror("Input Error", "Please enter a valid mean radius for the brake drum.")
+                return
 
-    # Display maximum load
-    lbl_max_load.config(text=f"Max Load (kg): {w_max:.2f}")
+            # Calculate maximum load (w_max in kg)
+            w_max = (4500 * rated_bp) / (2 * math.pi * rated_rpm * R)
+        else:
+            # If using an electric generator, max load calculation might differ or be predefined
+            w_max = 0  # Adjust this logic as needed
 
-    # Simulated data for observation table
-    observation_data = []
-    step_load = w_max / 5
-    bp_list = []
-    sfc_list = []
-    tfc_list = []
-    bmep_list = []
-    imep_list = []
-    
-    for i in range(6):
-        load_kg = i * step_load
-        load_lbs = load_kg * 2.20462
-        time_10cc = 100 - (i * 10)  # Sample decreasing values for time
-        tfc = (10 * fuel_density * 3600) / (time_10cc * 1000)
-        bp = rated_bp * (i / 5)
-        sfc = tfc / bp if bp != 0 else 0
-        bmep = (bp * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
-        ip = bp + 1  # Simplified, replace with friction power logic
-        imep = (ip * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
-        bte = (bp * 3600) / (tfc * calorific_value) * 100
-        ite = (ip * 3600) / (tfc * calorific_value) * 100
-        me = (bp / ip) * 100
-        
-        # Collect data for graphs
-        bp_list.append(bp)
-        sfc_list.append(sfc)
-        tfc_list.append(tfc)
-        bmep_list.append(bmep)
-        imep_list.append(imep)
-        
-        # Append to observation data
-        observation_data.append([i + 1, load_lbs, load_kg, time_10cc, tfc, sfc, bmep, ip, imep, bte, ite, imep])
+        # Ensure that inputs are positive and make sense
+        if bore <= 0 or stroke <= 0 or num_cylinders <= 0 or rated_bp <= 0 or rated_rpm <= 0 or fuel_density <= 0 or calorific_value <= 0:
+            raise ValueError("All input values must be positive.")
 
-    # Update observation table
-    for row in table.get_children():
-        table.delete(row)
-    for data in observation_data:
-        table.insert("", "end", values=data)
+        # Calculate cylinder area
+        area_of_cylinder = math.pi * (bore / 2) ** 2
+        num_working_strokes_per_minute = rated_rpm / 2
 
-    # Plot graphs
-    plot_graphs(bp_list, sfc_list, tfc_list, bmep_list, imep_list)
+        # Display maximum load
+        lbl_max_load.config(text=f"Max Load (kg): {w_max:.2f}")
+
+        # Generate observation data
+        step_load = w_max / 5
+        observation_data = []
+        bp_list = []
+        sfc_list = []
+        tfc_list = []
+        bmep_list = []
+        imep_list = []
+        me_list = []
+        bte_list = []
+        ite_list = []
+
+        for i in range(6):
+            load_kg = i * step_load
+            load_lbs = load_kg * 2.20462
+            time_10cc = 100 - (i * 10)  # Example values; replace with real observations
+            tfc = (10 * fuel_density * 3600) / (time_10cc * 1000)  # TFC in kg/h
+            bp = rated_bp * (i / 5)  # Linear scaling for example
+            sfc = tfc / bp if bp != 0 else 0
+            bmep = (bp * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
+            ip = bp + 1  # Simplified estimation of IP
+            imep = (ip * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
+            bte = (bp * 3600) / (tfc * calorific_value) * 100 if tfc != 0 else 0
+            ite = (ip * 3600) / (tfc * calorific_value) * 100 if tfc != 0 else 0
+            me = (bp / ip) * 100 if ip != 0 else 0
+
+            # Collect data for graphs
+            bp_list.append(bp)
+            sfc_list.append(sfc)
+            tfc_list.append(tfc)
+            bmep_list.append(bmep)
+            imep_list.append(imep)
+            me_list.append(me)
+            bte_list.append(bte)
+            ite_list.append(ite)
+
+            # Append to observation data
+            observation_data.append([i + 1, load_lbs, load_kg, time_10cc, tfc, sfc, bmep, ip, imep, bte, ite, imep])
+
+        # Update observation table
+        for row in table.get_children():
+            table.delete(row)
+        for data in observation_data:
+            table.insert("", "end", values=data)
+
+        # Plot graphs
+        plot_graphs(bp_list, sfc_list, tfc_list, bmep_list, imep_list, me_list, bte_list, ite_list)
+
+    except ValueError as e:
+        messagebox.showerror("Input Error", str(e))
 
 
-# Function to plot graphs
-def plot_graphs(bp_list, sfc_list, tfc_list, bmep_list, imep_list):
-    plt.figure(figsize=(10, 5))
-    
+def plot_graphs(bp_list, sfc_list, tfc_list, bmep_list, imep_list, me_list, bte_list, ite_list):
+    plt.figure(figsize=(12, 6))
+
     # Graph 1: BP vs SFC, TFC, BMEP, IMEP
     plt.subplot(1, 2, 1)
     plt.plot(bp_list, sfc_list, label="SFC", marker='o')
@@ -96,17 +116,19 @@ def plot_graphs(bp_list, sfc_list, tfc_list, bmep_list, imep_list):
     plt.ylabel("Parameters")
     plt.title("BP vs SFC, TFC, BMEP, IMEP")
     plt.legend()
-    
+    plt.grid(True)
+
     # Graph 2: BP vs ME, ITE, BTE
     plt.subplot(1, 2, 2)
-    plt.plot(bp_list, [me for me in sfc_list], label="ME", marker='o')
-    plt.plot(bp_list, [ite for ite in tfc_list], label="ITE", marker='o')
-    plt.plot(bp_list, [bte for bte in bmep_list], label="BTE", marker='o')
+    plt.plot(bp_list, me_list, label="ME", marker='o')
+    plt.plot(bp_list, ite_list, label="ITE", marker='o')
+    plt.plot(bp_list, bte_list, label="BTE", marker='o')
     plt.xlabel("BP (kW)")
-    plt.ylabel("Efficiency")
+    plt.ylabel("Efficiency (%)")
     plt.title("BP vs ME, ITE, BTE")
     plt.legend()
-    
+    plt.grid(True)
+
     plt.tight_layout()
     plt.show()
 
@@ -164,11 +186,11 @@ entry_brake_radius = tk.Entry(root)
 entry_brake_radius.grid(row=8, column=1)
 
 # Calculate button
-btn_calculate = tk.Button(root, text="Calculate", command=calculate_performance)
+btn_calculate = tk.Button(root, text="Calculate Performance", command=calculate_performance)
 btn_calculate.grid(row=9, column=0, columnspan=3)
 
-# Max load label
-lbl_max_load = tk.Label(root, text="Max Load (kg): ")
+# Maximum load display
+lbl_max_load = tk.Label(root, text="Max Load (kg): -")
 lbl_max_load.grid(row=10, column=0, columnspan=3)
 
 # Observation table
@@ -178,5 +200,7 @@ for col in columns:
     table.heading(col, text=col)
 table.grid(row=11, column=0, columnspan=3)
 
-# Run the GUI
+# Run the main loop
 root.mainloop()
+
+    
