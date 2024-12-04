@@ -24,7 +24,7 @@ def enter_time_for_fuel_consumption(w_max, step_load):
     time_input_window.title("Enter Time for 10cc Fuel Consumption")
     tk.Label(time_input_window, text="Enter time for each load step (seconds):").pack()
     time_entries = []
-    for i in range(6):  # Assuming 6 steps (including no load)
+    for i in range(6):  
         frame = tk.Frame(time_input_window)
         frame.pack()
         tk.Label(frame, text=f"Load Step {i + 1}:").pack(side=tk.LEFT)
@@ -72,8 +72,8 @@ def calculate_performance(w_max, step_load, time_values):
             # Calculate maximum load (w_max in kg)
             w_max = (4500 * rated_bp) / (2 * math.pi * rated_rpm * R)
         else:
-            # If using an electric generator, max load calculation might differ or be predefined
-            w_max = 0  # Adjust this logic as needed
+            
+            w_max = 0  
 
         # Ensure that inputs are positive and make sense
         if bore <= 0 or stroke <= 0 or num_cylinders <= 0 or rated_bp <= 0 or rated_rpm <= 0 or fuel_density <= 0 or calorific_value <= 0:
