@@ -24,7 +24,7 @@ def enter_time_for_fuel_consumption(w_max, step_load):
     time_input_window.title("Enter Time for 10cc Fuel Consumption")
     tk.Label(time_input_window, text="Enter time for each load step (seconds):").pack()
     time_entries = []
-    for i in range(6):  
+    for i in range(6):  # Assuming 6 steps (including no load)
         frame = tk.Frame(time_input_window)
         frame.pack()
         tk.Label(frame, text=f"Load Step {i + 1}:").pack(side=tk.LEFT)
@@ -72,8 +72,8 @@ def calculate_performance(w_max, step_load, time_values):
             # Calculate maximum load (w_max in kg)
             w_max = (4500 * rated_bp) / (2 * math.pi * rated_rpm * R)
         else:
-            
-            w_max = 0  
+            # If using an electric generator, max load calculation might differ or be predefined
+            w_max = 0  # Adjust this logic as needed
 
         # Ensure that inputs are positive and make sense
         if bore <= 0 or stroke <= 0 or num_cylinders <= 0 or rated_bp <= 0 or rated_rpm <= 0 or fuel_density <= 0 or calorific_value <= 0:
@@ -100,13 +100,13 @@ def calculate_performance(w_max, step_load, time_values):
         bte_list = []
         ite_list = []
 
-        for i in range(6):
+        for i in range(0,6):
             load_kg = i * step_load
             load_lbs = load_kg * 2.20462
             time_10cc = time_values[i]  # Using values from time_values
             tfc = (10 * fuel_density * 3600) / (time_10cc * 1000)  # TFC in kg/h
-            bp = rated_bp * (i / 5)  # Linear scaling for example
-            sfc = tfc / bp if bp != 0 else 0
+            bp = (2*math.pi*rated_rpm*R*load_kg*9.81)/(60000)  # Linear scaling for example
+            sfc = tfc / bp if bp != 0 else float("inf")
             bmep = (bp * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
             ip = bp + 1  # Simplified estimation of IP
             imep = (ip * 60) / (stroke * area_of_cylinder * num_working_strokes_per_minute * num_cylinders)
@@ -232,8 +232,9 @@ table_frame.grid(row=10, column=0, columnspan=3)
 table = ttk.Treeview(table_frame, columns=("Step", "Load (lbs)", "Load (kg)", "Time for 10cc (s)", "TFC (kg/h)", "SFC (g/kWh)", "BMEP (MPa)", "BP (kW)", "IMEP (MPa)", "BTE (%)", "ITE (%)", "IMEP"))
 for col in table["columns"]:
     table.heading(col, text=col)
-table.pack()
-
+    table.column(col, width=70)
+    
+table.pack(fill="both", expand=True)
 # Max load label
 lbl_max_load = tk.Label(root, text="Max Load (kg): 0")
 lbl_max_load.grid(row=9, column=0)
